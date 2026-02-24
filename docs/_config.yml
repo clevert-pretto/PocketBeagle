@@ -1,0 +1,12 @@
+# _config.yml
+remote_theme: just-the-docs/just-the-docs
+title: Embedded Linux Knowledge Base
+description: Learning journey for embedded linux using Pocket Beagle
+
+# URL Settings (Crucial for GitHub Actions)
+# Replace 'username' and 'repo-name' with yours
+url: "https://clevert-pretto.github.io"
+baseurl: "/PocketBeagle"
+
+# Search settings
+search_enabled: true
