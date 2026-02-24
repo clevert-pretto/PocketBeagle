@@ -1,8 +1,8 @@
 ---
 layout: default
 title: "Phase 1 : Module 1 The command line and Filesystem"
-parent:
-nav_order: 1
+parent: "Phase 1 : Understanding User space"
+nav_order: 2
 has_children: false
 ---
 
