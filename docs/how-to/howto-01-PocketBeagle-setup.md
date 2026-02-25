@@ -2,6 +2,7 @@
 layout: default
 title: "How to setup PocketBeagle, connect via WSL2, share internet"
 nav_order: 80
+parent: "How-to Articles"
 has_children: false
 ---
 
@@ -120,5 +121,26 @@ sudo iptables -A FORWARD -i eth0 -o $INTERFACE -m state --state RELATED,ESTABLIS
 sudo iptables -A FORWARD -i $INTERFACE -o eth0 -j ACCEPT
 echo "Bridge active. SSH into board: ssh debian@192.168.7.2"
 ```
+
+## Quick checks on Beagle after running above script
+1. check your nameserver
+```bash 
+cat /etc/resolv.conf
+```
+2. If you don't see nameserver 8.8.8.8 or nameserver 1.1.1.1, the board is blind to the web. Force a DNS server into the configuration:
+```bash
+echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
+```
+3. The Beagle needs to know that your PC is its "Gateway" to the outside world.
+```bash
+ip route
+```
+4. ou should see a line starting with default via 192.168.7.1 (assuming 192.168.7.1 is your PC's IP on that bridge).
+
+If the default route is missing, add it:
+```bash
+sudo ip route add default via 192.168.7.1
+```
+5. Now try `ping -c 3 8.8.8.8`. If it works, try `ping google.com`. If the IP works but the name fails, your DNS is still blocked.
 
 ---

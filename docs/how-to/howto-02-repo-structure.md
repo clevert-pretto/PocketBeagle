@@ -2,6 +2,7 @@
 layout: default
 title: "Repository structure for embedded linux learning with PocketBeagle"
 nav_order: 81
+parent: "How-to Articles"
 has_children: false
 ---
 
