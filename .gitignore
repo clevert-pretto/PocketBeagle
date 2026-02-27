@@ -35,3 +35,7 @@ Module.symvers
 .vscode/
 *.swp
 .DS_Store
+
+/temp_modules/
+/phase-2-bsp/05-kernel/linux/
+/phase-2-bsp/05-kernel/linux/built_log.txt
