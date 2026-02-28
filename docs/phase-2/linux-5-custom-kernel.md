@@ -25,9 +25,9 @@ sudo apt install flex bison build-essential libncurses-dev libssl-dev bc lzop rs
 1. Git clone the right repository and branch
 
 ```bash
-git clone -b am33x-v6.18 https://github.com/RobertCNelson/bb-kernel.git
-cd bb-kernel
-./build_kernel.sh
+git clone --depth 1 -b v6.12.34-ti-arm32-r12 https://github.com/beagleboard/linux.git
+cd linux
+make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- bb.org_defconfig
 ```
 
 2. Set Build Variables
@@ -39,7 +39,7 @@ export ARCH=arm
 export CROSS_COMPILE=arm-linux-gnueabihf-
 ```
 
-2. Customize the Kernel
+3. Customize the Kernel
 Open the visual configuration menu to append a custom local version string.
 
 ```Bash
@@ -50,7 +50,7 @@ make menuconfig
 - Enter your custom tag (e.g., -ravi-custom-v1).
 - Save and exit.
 
-3. Compile the Kernel, Modules, and Device Tree
+4. Compile the Kernel, Modules, and Device Tree
 Execute the build utilizing all available CPU cores.
 
 ```Bash
@@ -63,7 +63,7 @@ Expected Output on Success:
   Kernel: arch/arm/boot/zImage is ready
 ```
 
-4. Module Packaging
+5. Module Packaging
 Kernel modules (.ko files) must be installed into a temporary directory on the host, compressed into an archive, and then extracted on the board.
 
 - Install to Temporary Directory

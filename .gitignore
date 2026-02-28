@@ -36,6 +36,10 @@ Module.symvers
 *.swp
 .DS_Store
 
+#Ignore heavy linux and buildroot files/folders
 /temp_modules/
 /phase-2-bsp/05-kernel/linux/
 /phase-2-bsp/05-kernel/linux/built_log.txt
+/phase-2-bsp/06-Buildroot/buildroot/output/
+/phase-2-bsp/06-Buildroot/buildroot/dl/
+/phase-2-bsp/06-Buildroot/buildroot/.git/
