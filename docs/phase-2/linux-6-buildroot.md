@@ -129,23 +129,88 @@ Once the build is complete, flash the generated image located at `output/images/
 **Automating the Boot Sequence (uEnv.txt)**
 To bypass U-Boot's modern "Distro Boot" network-search loop and automatically load the custom kernel, create a file named `uEnv.txt` on the root of the FAT32 boot partition of the SD card.
 
-Contents of `uEnv.txt`:
+1. Method 1 Via uEnv.txt :
+   Contents of `uEnv.txt`:
 
-```Plaintext
-bootfile=zImage
-fdtfile=am335x-pocketbeagle.dtb
-bootpartition=mmcblk0p2
-console=ttyO0,115200n8
-loadaddr=0x82000000
-fdtaddr=0x88000000
+   ```Plaintext
+   bootfile=zImage
+   fdtfile=am335x-pocketbeagle.dtb
+   bootpartition=mmcblk0p2
+   console=ttyO0,115200n8
+   loadaddr=0x82000000
+   fdtaddr=0x88000000
 
-loadimage=fatload mmc 0:1 ${loadaddr} ${bootfile}
-loadfdt=fatload mmc 0:1 ${fdtaddr} ${fdtfile}
-set_bootargs=setenv bootargs console=${console} root=/dev/${bootpartition} rw rootfstype=ext4 rootwait
-uenvcmd=run set_bootargs; run loadimage; run loadfdt; printenv bootargs; bootz ${loadaddr} - ${fdtaddr}
-```
+   loadimage=fatload mmc 0:1 ${loadaddr} ${bootfile}
+   loadfdt=fatload mmc 0:1 ${fdtaddr} ${fdtfile}
+   set_bootargs=setenv bootargs console=${console} root=/dev/${bootpartition} rw rootfstype=ext4 rootwait
+   uenvcmd=run set_bootargs; run loadimage; run loadfdt; printenv bootargs; bootz ${loadaddr} - ${fdtaddr}
+   ```
 
-*Note: The AM335x native UART console is ttyO0 (capital letter O, number zero).*
+   *Note: The AM335x native UART console is ttyO0 (capital letter O, number zero).*
+
+2. Method 2 via env variables :
+   Type these commands exactly at the => prompt:
+
+   1. Define your boot variables:
+
+   ```Bash
+   setenv console ttyO0,115200n8
+   setenv bootpartition mmcblk0p2
+   setenv loadaddr 0x82000000
+   setenv fdtaddr 0x88000000
+   ```
+   2. Define the loading and booting logic:
+
+   ```Bash
+   setenv loadimage 'fatload mmc 0:1 ${loadaddr} zImage'
+   setenv loadfdt 'fatload mmc 0:1 ${fdtaddr} am335x-pocketbeagle.dtb'
+   setenv set_bootargs 'setenv bootargs console=${console} root=/dev/${bootpartition} rw rootfstype=ext4 rootwait'
+   ```
+   3. Set the automatic boot sequence:
+
+   ```Bash
+   setenv uenvcmd 'run set_bootargs; run loadimage; run loadfdt; bootz ${loadaddr} - ${fdtaddr}'
+   setenv bootcmd 'run uenvcmd'
+   ```
+   4. Lock it in:
+
+   ```Bash
+   saveenv
+   ```
+   Note: 
+   If you see *Saving Environment to FAT... OK*, you are finished! The board will now boot automatically on power-up.
+   If `saveenv` says `Unknown command`, it means your Buildroot U-Boot configuration doesn't have "*Environment in FAT*" enabled. To fix that, you'd need to:
+
+   1. Run make uboot-menuconfig.
+
+   2. Go to *Environment* ---> Select *Environment Store.*
+
+   3. Choose *Environment is in a FAT filesystem*.
+
+   4. Set Name of the FAT file to *uboot.env*.
+
+   5. *Rebuild* U-Boot.
+
+3. Method 3: Writing a `uEnv.txt` file via fatwrite (Advanced):
+   If you specifically want to create or overwrite a physical uEnv.txt file on the FAT partition from within U-Boot, you have to use the fatwrite command. This is trickier because U-Boot requires you to tell it the exact size of the file in hexadecimal.
+
+   1. Store the text in RAM:
+   We "write" the text to a memory address first (we'll use the loadaddr).
+
+   ```Bash
+   mw.b ${loadaddr} 0 0x1000
+   setenv myenv "console=ttyO0,115200n8\0bootpartition=mmcblk0p2\0uenvcmd=run loadimage; bootz ${loadaddr} - ${fdtaddr}\0"
+   env export -t ${loadaddr} myenv
+   ```
+   2. Write that RAM block to the SD card:
+
+   ```Bash
+   # Example: Writing 256 bytes (0x100) to uEnv.txt
+   fatwrite mmc 0:1 ${loadaddr} uEnv.txt 0x100
+   ```
+
+⚠️ Warning: Why Method 1 or 2 is better and safer?
+   Using `saveenv` is much safer. If you make a mistake with fatwrite (like getting the file size wrong), you can accidentally corrupt other files on your boot partition. `saveenv` handles the file system logic for you.
 
 ## The Final Result
 Insert the SD card, connect the serial debug cable, and apply power. U-Boot will read `uEnv.txt`, load the kernel and device tree into RAM, and execute the boot sequence, resulting in the custom Buildroot login prompt:
@@ -452,6 +517,7 @@ Here are the specific core components we chose to include in our operating syste
 
 **Role**: The structured "C: Drive" residing on the SD card's second partition (mmcblk0p2), expanded from the default 60MB to comfortably house the modern 6.12.x kernel modules.
 
+**4. 
 ### 💡 Pro-Tip for the Future
 If you ever go back into `make menuconfig` and start adding a bunch of custom packages (like Python, SSH servers, or text editors), you don't have to write them all down manually!
 
@@ -460,8 +526,67 @@ Buildroot can automatically generate a spreadsheet of every single piece of soft
 ```Bash
 make legal-info
 ```
-
 It will create a folder called legal-info inside output/ containing a manifest.csv file. That file is your exact, automatically generated Bill of Materials!
+
+
+## 🌐 Phase 8: Network Connectivity & SSH (USB Ethernet Gadget)
+To transition the PocketBeagle from a tethered serial device to a headless, networked edge computing node, we enabled the Linux USB Ethernet Gadget drivers (g_ether). This allows the micro-USB power cable to act as a high-speed network interface, providing SSH access and SCP file transfers without needing a physical Ethernet port.
+
+1. Kernel Configuration (The USB Driver)
+We configured the 6.12.x kernel to load the appropriate USB networking protocols for both Windows and Unix-based host machines.
+
+Kernel Menu (`make linux-menuconfig`):
+
+   1. Navigate to: *Device Drivers* ---> *USB support* ---> *USB Gadget Support*.
+
+   2. Enable core support: <*> *USB Gadget Support*
+
+   3. Enable precompiled drivers: <*> *USB Gadget precompiled drivers*
+
+   4. Select the gadget type: *Ethernet Gadget (with CDC Ethernet and RNDIS support)*
+
+   5. Enable for Windows hosts: [*]* RNDIS Support*
+
+   6. Enable for Mac/Linux hosts: [*] *Ethernet emulation model (EEM) support*
+
+2. Buildroot Configuration (The SSH Server)
+To allow remote logins, we installed a lightweight, embedded-friendly SSH server.
+
+Buildroot Menu (make menuconfig):
+
+   Navigate to: *Target packages* ---> *Networking applications*.
+
+   Enable the server: [*] *dropbear*
+
+   Rebuild the System:
+   ```Bash
+   make linux-rebuild
+   make
+   ```
+
+3. On-Board Network Configuration
+After flashing the updated image and booting via the serial console, the board's internal network interface (usb0) must be assigned a static IP address.
+
+   1. Open `/etc/network/interfaces` using `vi` and append the following configuration:
+
+   ```Plaintext
+   auto usb0
+   iface usb0 inet static
+      address 192.168.7.2
+      netmask 255.255.255.0
+   ```
+   2. Restart the networking service to apply the configuration: `/etc/init.d/S40network restart`
+
+4. Host Machine Configuration & Access
+When the PocketBeagle is connected via USB, it appears as a "Remote NDIS Compatible Device" (Windows) or a standard CDC Ethernet interface (Linux/Mac).
+
+   1. Host IP Setup: Configure the host machine's corresponding network adapter to use a static IPv4 address of 192.168.7.1 (Subnet: 255.255.255.0).
+
+   2. SSH Connection: Access the board via the host terminal:
+   ```Bash
+   ssh root@192.168.7.2
+   ```
+
 
 ---
 
