@@ -1,5 +1,5 @@
 ---
-title: "Module 06: Device tree basics"
+title: "Module 07: Device tree basics"
 parent: "Phase 3 : Understanding Device tree"
 nav_order: 1
 ---
@@ -15,6 +15,7 @@ A Device Tree is a tree-like data structure that describes the non-discoverable 
 
 ## 🛠️ The Three Files You Must Know
 The "Workflow" of a Device Tree:
+
 | File Extension |Name | Purpose |
 |----------------|-----|---------|
 |.dtsi| Device Tree Include | The "Header" file. Contains shared hardware info (like the internal registers of the AM335x chip).|
@@ -28,7 +29,7 @@ A Device Tree is made of Nodes and Properties. Think of it like a JSON file for 
 1. The Root Node (`/`)
 Every DT starts with a root node. Inside, it must have a compatible string. This is how the kernel knows if it’s running on the right board.
 
-```DTS
+```Plaintext
 / {
     model = "TI AM335x PocketBeagle";
     compatible = "ti,am335x-pocketbeagle", "ti,am33xx";
@@ -81,7 +82,7 @@ Now, How does the Device Tree know where the GPIO registers are located in the C
 
 It doesn't define them in the `.dts`. It "Includes" them from the `.dtsi` (Include) file provided by the chip manufacturer (TI). If you look at `am33xx.dtsi`, you’ll find the base address:
 
-```DTS
+```Plaintext
 gpio1: gpio@4804c000 {
     compatible = "ti,omap4-gpio";
     reg = <0x4804c000 0x1000>; // Base Address and Range
@@ -102,7 +103,7 @@ We are going to manually edit your decompiled (In above steps) `pocketbeagle_ext
 **1. Step 1: Edit the Source**
 Open your `pocketbeagle_extracted.dts` on your Ubuntu/WSL host. Scroll to the very bottom, just before the final }; closing brace, and add this "Interview Node":
 
-```DTS
+```Plaintext
 	/* Custom Hardware Node for Interview Demo */
 	my_custom_device {
 		compatible = "ravi,interview-chip-v1";
@@ -132,6 +133,5 @@ ls /sys/firmware/devicetree/base/my_custom_device/
 ```
 If you see your description and `custom-id` files there, congratulations! you have successfully modified the hardware architecture of a running Linux system.
 
----
 
 
